@@ -6,7 +6,8 @@ Downloads the public attendee list of the IMF / World Bank Annual Meetings
 records who appeared in the list and who disappeared from it.
 
 Outputs (stdlib only, no dependencies):
-  data/participants.json  everyone ever seen: first_seen (f) / removed_at (r).
+  data/participants.json  everyone ever seen: first_seen (f) / removed_at (r),
+                          attribute history (h) and last change time (u).
                           Rewritten only when something changed.
   data/status.json        result of the latest check. Rewritten on every run.
 
@@ -36,6 +37,8 @@ STATUS_FILE = DATA_DIR / "status.json"
 # If the fresh list is much shorter than the current one, the source is most
 # likely broken (partial upload, error page). Stop instead of "removing" people.
 MIN_RATIO = 0.7
+# Attributes whose changes are logged per person in "h" (history) and "u" (last change).
+TRACKED = ("n", "t", "o", "c", "k", "g")
 USER_AGENT = "Mozilla/5.0 (compatible; amf-participants-tracker/1.0)"
 
 
@@ -123,7 +126,7 @@ def main():
 
     ts = now_iso()
     state = load_state()
-    added = removed = 0
+    added = removed = changed = 0
 
     if state is None:  # first run = baseline, nobody is "new"
         people = {pid: {**p, "f": ts, "r": None} for pid, p in current.items()}
@@ -139,14 +142,19 @@ def main():
             if old is None or old.get("r"):  # new, or came back after removal
                 people[pid] = {**fresh, "f": ts, "r": None}
                 added += 1
-            else:
-                old.update(fresh)  # keep title/organisation up to date
+                continue
+            diff = [{"at": ts, "f": k, "o": old.get(k, ""), "v": fresh[k]} for k in TRACKED if old.get(k, "") != fresh[k]]
+            if diff:
+                old["h"] = (old.get("h") or []) + diff
+                old["u"] = ts
+                changed += 1
+            old.update(fresh)  # areas of interest are refreshed silently
         for pid, old in people.items():
             if not old.get("r") and pid not in current:
                 old["r"] = ts
                 removed += 1
-        if added or removed:
-            state["runs"].append({"at": ts, "total": len(current), "added": added, "removed": removed})
+        if added or removed or changed:
+            state["runs"].append({"at": ts, "total": len(current), "added": added, "removed": removed, "changed": changed})
 
     state["people"] = sorted(people.values(), key=lambda p: (p["l"].lower(), p["n"].lower(), p["id"]))
 
@@ -161,10 +169,11 @@ def main():
         "total": len(current),
         "added": added,
         "removed": removed,
+        "changed": changed,
         "source_last_modified": last_modified,
     }
     STATUS_FILE.write_text(json.dumps(status, ensure_ascii=False, indent=1) + "\n", "utf-8")
-    print(f"{ts}: {len(current)} in list, +{added} / -{removed}")
+    print(f"{ts}: {len(current)} in list, +{added} / -{removed} / ~{changed}")
 
 
 if __name__ == "__main__":
