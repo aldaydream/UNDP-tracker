@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>AMF 2026 · трекер участников</title>
+<style>
+:root{
+  --bg:#f5f6f8; --surface:#fff; --text:#15171c; --muted:#5f6774; --border:#e2e5ea; --soft:#eef0f4;
+  --accent:#2f5bea; --accent-soft:#e8eefe; --new:#12804a; --new-soft:#e3f4ea; --gone:#c0392f; --gone-soft:#fbe9e7;
+  --radius:10px; --shadow:0 1px 2px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0f1115; --surface:#171a20; --text:#e7e9ee; --muted:#9ba3b0; --border:#2a2f38; --soft:#20242c;
+  --accent:#7d9bff; --accent-soft:#1f2a4a; --new:#4fcf8c; --new-soft:#173326; --gone:#ff8a7e; --gone-soft:#3a1f1d;
+  --shadow:none;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1280px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:22px;line-height:1.25;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0;font-size:13px}
+.sub b{color:var(--text);font-weight:600}
+.warn{color:var(--gone);font-weight:600}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:20px 0 12px}
+.kpi{padding:14px 16px;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.kpi:hover{border-color:var(--accent)}
+.kpi .v{font-size:26px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi .l{color:var(--muted);font-size:12.5px}
+.kpi.new .v{color:var(--new)} .kpi.gone .v{color:var(--gone)}
+.chart{padding:14px 16px 10px;margin-bottom:12px}
+.chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;margin-bottom:8px;flex-wrap:wrap}
+.chart-head h2{font-size:14px;margin:0}
+.legend{color:var(--muted);font-size:12px;display:flex;gap:14px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:0}
+.bars{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:6px;align-items:stretch}
+.day{display:flex;flex-direction:column;align-items:stretch;min-width:0}
+.half{height:54px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+.half.down{justify-content:flex-start;border-top:1px solid var(--border)}
+.bar{width:100%;max-width:34px;border:0;padding:0;cursor:pointer;border-radius:3px 3px 0 0;background:var(--new)}
+.down .bar{border-radius:0 0 3px 3px;background:var(--gone)}
+.bar:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-size:11px;font-variant-numeric:tabular-nums;color:var(--muted);line-height:14px;height:14px}
+.dlabel{font-size:11px;color:var(--muted);text-align:center;margin-top:2px;white-space:nowrap}
+.dlabel.today{color:var(--text);font-weight:600}
+.start{font-size:10.5px;color:var(--accent);text-align:center;height:14px}
+.empty-note{color:var(--muted);font-size:12.5px;margin:8px 0 0}
+.filters{padding:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+input[type=search],select{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;height:36px;padding:0 10px;min-width:0}
+input[type=search]{flex:1 1 100%}
+select{flex:1 1 150px;max-width:220px}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex:0 0 auto}
+.seg button{font:inherit;border:0;background:var(--surface);color:var(--muted);height:34px;padding:0 12px;cursor:pointer;border-right:1px solid var(--border)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.resbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 2px 8px;color:var(--muted);font-size:13px;flex-wrap:wrap}
+.btn{font:inherit;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.tablewrap{overflow:hidden}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+th,td{padding:9px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--border);overflow-wrap:break-word}
+th{font-size:12px;font-weight:600;color:var(--muted);background:var(--soft);position:sticky;top:0;z-index:1;white-space:nowrap}
+th button{all:unset;cursor:pointer}
+th button:focus-visible{outline:2px solid var(--accent)}
+th .arr{opacity:.7;margin-left:4px}
+tbody tr:hover{background:var(--soft)}
+tr.is-gone td{color:var(--muted)}
+tr.is-gone .name{text-decoration:line-through;text-decoration-color:var(--gone)}
+.name{font-weight:600}
+.areas{display:block;color:var(--muted);font-size:12px;font-weight:400;margin-top:2px}
+.badge{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.badge.new{background:var(--new-soft);color:var(--new)}
+.badge.gone{background:var(--gone-soft);color:var(--gone)}
+.cat{font-size:12.5px}
+.muted{color:var(--muted)}
+.tnum{font-variant-numeric:tabular-nums;white-space:nowrap}
+.more{display:flex;justify-content:center;padding:14px}
+.msg{padding:28px;text-align:center;color:var(--muted)}
+footer{margin-top:22px;color:var(--muted);font-size:12px}
+footer a{color:var(--muted)}
+col.c-name{width:21%} col.c-title{width:18%} col.c-org{width:21%} col.c-country{width:10%} col.c-cat{width:11%} col.c-added{width:8%} col.c-st{width:11%}
+@media (max-width:860px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .bars{gap:4px;grid-template-columns:repeat(7,minmax(0,1fr))}
+  .day:nth-child(-n+7){display:none}
+  select{flex:1 1 45%;max-width:none}
+  colgroup{display:none}
+  table,tbody,tr,td{display:block;width:100%}
+  thead{display:none}
+  tr{padding:10px 12px;border-bottom:1px solid var(--border)}
+  td{border:0;padding:2px 0}
+  td[data-l]:not(.namecell)::before{content:attr(data-l) ": ";color:var(--muted);font-size:12px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>World Bank / IMF Annual Meetings 2026 · Bangkok — трекер участников</h1>
+    <p class="sub" id="statusLine">Загрузка данных…</p>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="Сводка"></section>
+
+  <section class="card chart" aria-labelledby="chartTitle">
+    <div class="chart-head">
+      <h2 id="chartTitle">Изменения списка по дням (время Бангкока)</h2>
+      <div class="legend"><span><i style="background:var(--new)"></i>добавлены</span><span><i style="background:var(--gone)"></i>выбыли</span></div>
+    </div>
+    <div class="bars" id="bars"></div>
+    <p class="empty-note" id="chartNote" hidden></p>
+  </section>
+
+  <section class="card filters" aria-label="Фильтры">
+    <input type="search" id="q" placeholder="Поиск: имя, организация, должность, тема…" aria-label="Поиск">
+    <select id="cat" aria-label="Категория"></select>
+    <select id="country" aria-label="Страна"></select>
+    <select id="guest" aria-label="Подкатегория"></select>
+    <div class="seg" role="group" aria-label="Статус" id="statusSeg">
+      <button data-v="active">В списке</button>
+      <button data-v="new">Новые</button>
+      <button data-v="removed">Выбывшие</button>
+      <button data-v="all">Все</button>
+    </div>
+    <select id="period" aria-label="Период"></select>
+  </section>
+
+  <div class="resbar">
+    <span id="count"></span>
+    <span>
+      <button class="btn" id="reset">Сбросить фильтры</button>
+      <button class="btn primary" id="csv">Скачать CSV</button>
+    </span>
+  </div>
+
+  <div class="card tablewrap">
+    <table>
+      <colgroup><col class="c-name"><col class="c-title"><col class="c-org"><col class="c-country"><col class="c-cat"><col class="c-added"><col class="c-st"></colgroup>
+      <thead><tr>
+        <th><button data-sort="name">Имя<span class="arr"></span></button></th>
+        <th>Должность</th>
+        <th><button data-sort="org">Организация<span class="arr"></span></button></th>
+        <th><button data-sort="country">Страна<span class="arr"></span></button></th>
+        <th><button data-sort="cat">Категория<span class="arr"></span></button></th>
+        <th><button data-sort="added">Добавлен<span class="arr"></span></button></th>
+        <th>Статус</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="more" id="moreWrap" hidden><button class="btn" id="more">Показать ещё</button></div>
+  </div>
+
+  <footer>
+    Источник: публичный список участников IMF Connect (<a id="srcLink" href="#" rel="noopener" target="_blank">JSON</a>), тот же, что показывает приложение «IMF | World Bank Meetings».
+    Проверка каждые 3 часа. «Новый» — человек появился в списке после старта отслеживания; «выбыл» — исчез из списка.
+  </footer>
+</div>
+
+<script>
+const TZ = 'Asia/Bangkok', TZ_OFF = 7 * 3600e3, DAY = 86400e3, PAGE = 100;
+const CATS = {Delegates:'Делегаты', Observers:'Наблюдатели', Guests:'Гости', Press:'Пресса', Cso:'НКО (CSO)'};
+const fmtShort = new Intl.DateTimeFormat('ru-RU', {timeZone: TZ, day: '2-digit', month: '2-digit'});
+const fmtFull = new Intl.DateTimeFormat('ru-RU', {timeZone: TZ, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'});
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fold = s => String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+const dayStart = ms => Math.floor((ms + TZ_OFF) / DAY) * DAY - TZ_OFF;   // Bangkok has no DST
+const dayKey = ms => new Date(dayStart(ms) + TZ_OFF).toISOString().slice(0, 10);
+const catLabel = k => CATS[k] || k;
+const catEn = k => k === 'Cso' ? 'CSO' : k;
+
+let DATA = null, STATUS = null, PEOPLE = [], BASE = '', prevVisit = null;
+const DEFAULTS = {q:'', cat:'', country:'', guest:'', status:'active', period:'7d', sort:'name', dir:1};
+let S = {...DEFAULTS}, limit = PAGE;
+
+/* ---------- visits (per browser, optional) ---------- */
+function trackVisit() {
+  try {
+    const now = Date.now(), last = +localStorage.getItem('amf_last') || 0;
+    if (last && now - last > 3600e3) localStorage.setItem('amf_prev', String(last));
+    localStorage.setItem('amf_last', String(now));
+    prevVisit = +localStorage.getItem('amf_prev') || null;
+  } catch (e) { prevVisit = null; }
+}
+
+/* ---------- periods ---------- */
+function periodRange(p) {
+  const now = Date.now(), today = dayStart(now);
+  if (p === 'today') return [today, Infinity];
+  if (p === 'yesterday') return [today - DAY, today];
+  if (p === '3d') return [today - 2 * DAY, Infinity];
+  if (p === '7d') return [today - 6 * DAY, Infinity];
+  if (p === 'visit') return [prevVisit || today, Infinity];
+  if (p.startsWith('day:')) { const s = Date.parse(p.slice(4) + 'T00:00:00Z') - TZ_OFF; return [s, s + DAY]; }
+  return [-Infinity, Infinity];
+}
+function periodLabel(p) {
+  return ({today:'сегодня', yesterday:'вчера', '3d':'за 3 дня', '7d':'за 7 дней', visit:'с прошлого визита', all:'за всё время'})[p]
+    || (p.startsWith('day:') ? fmtShort.format(Date.parse(p.slice(4) + 'T12:00:00Z')) : p);
+}
+const inRange = (iso, [a, b]) => { if (!iso) return false; const t = Date.parse(iso); return t >= a && t < b; };
+const isNew = p => p.f !== BASE;
+
+/* ---------- load ---------- */
+async function load() {
+  trackVisit();
+  try {
+    const [d, s] = await Promise.all([
+      fetch('data/participants.json', {cache: 'no-cache'}).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+      fetch('data/status.json', {cache: 'no-cache'}).then(r => r.ok ? r.json() : null).catch(() => null),
+    ]);
+    DATA = d; STATUS = s;
+  } catch (e) {
+    $('statusLine').innerHTML = '<span class="warn">Данных пока нет.</span> Запустите в GitHub → Actions workflow «Update participants», через минуту обновите страницу.';
+    $('rows').innerHTML = '<tr><td colspan="7" class="msg">Нет данных</td></tr>';
+    return;
+  }
+  BASE = DATA.meta.baseline_at;
+  PEOPLE = DATA.people;
+  for (const p of PEOPLE) p._s = fold([p.n, p.t, p.o, p.c, p.a, p.g].join(' '));
+  $('srcLink').href = DATA.meta.source;
+  readHash();
+  buildSelects();
+  renderStatus(); renderKpis(); renderChart(); syncControls(); render();
+}
+
+/* ---------- header / KPIs / chart ---------- */
+function renderStatus() {
+  const checked = STATUS?.checked_at || DATA.runs.at(-1).at;
+  const age = Date.now() - Date.parse(checked);
+  const lastChange = [...DATA.runs].reverse().find(r => !r.baseline);
+  $('statusLine').innerHTML =
+    `Последняя проверка: <b>${fmtFull.format(new Date(checked))}</b> (Бангкок)` +
+    (age > 8 * 3600e3 ? ' · <span class="warn">проверка давно не проходила, загляните в GitHub Actions</span>' : '') +
+    ` · последнее изменение списка: <b>${lastChange ? fmtFull.format(new Date(lastChange.at)) : 'пока не было'}</b>` +
+    ` · отслеживание с <b>${fmtShort.format(new Date(BASE))}</b>`;
+}
+function renderKpis() {
+  const active = PEOPLE.filter(p => !p.r).length;
+  const t = periodRange('today'), w = periodRange('7d');
+  const newToday = PEOPLE.filter(p => isNew(p) && inRange(p.f, t)).length;
+  const new7 = PEOPLE.filter(p => isNew(p) && inRange(p.f, w)).length;
+  const gone7 = PEOPLE.filter(p => inRange(p.r, w)).length;
+  const tiles = [
+    ['', active, 'в списке сейчас', {status:'active'}],
+    ['new', newToday, 'новых сегодня', {status:'new', period:'today'}],
+    ['new', new7, 'новых за 7 дней', {status:'new', period:'7d'}],
+    ['gone', gone7, 'выбыли за 7 дней', {status:'removed', period:'7d'}],
+  ];
+  $('kpis').innerHTML = tiles.map(([cls, v, l], i) =>
+    `<button class="card kpi ${cls}" data-i="${i}"><div class="v">${v.toLocaleString('ru-RU')}</div><div class="l">${l}</div></button>`).join('');
+  $('kpis').querySelectorAll('.kpi').forEach(b => b.onclick = () => applyPreset(tiles[+b.dataset.i][3]));
+}
+function renderChart() {
+  const today = dayStart(Date.now()), days = [];
+  for (let i = 13; i >= 0; i--) days.push(dayKey(today - i * DAY));
+  const add = {}, rem = {};
+  for (const p of PEOPLE) {
+    if (isNew(p)) { const k = dayKey(Date.parse(p.f)); add[k] = (add[k] || 0) + 1; }
+    if (p.r) { const k = dayKey(Date.parse(p.r)); rem[k] = (rem[k] || 0) + 1; }
+  }
+  const max = Math.max(1, ...days.map(d => Math.max(add[d] || 0, rem[d] || 0)));
+  const baseDay = dayKey(Date.parse(BASE)), todayKey = dayKey(Date.now());
+  const h = n => n ? Math.max(3, Math.round(n / max * 40)) : 0;
+  $('bars').innerHTML = days.map(d => {
+    const a = add[d] || 0, r = rem[d] || 0, lbl = fmtShort.format(Date.parse(d + 'T12:00:00Z'));
+    return `<div class="day">
+      <div class="half up"><span class="num">${a || ''}</span>${a ? `<button class="bar" style="height:${h(a)}px" data-d="${d}" data-s="new" aria-label="${lbl}: добавлено ${a}" title="${lbl}: +${a}"></button>` : ''}</div>
+      <div class="half down">${r ? `<button class="bar" style="height:${h(r)}px" data-d="${d}" data-s="removed" aria-label="${lbl}: выбыло ${r}" title="${lbl}: −${r}"></button>` : ''}<span class="num">${r || ''}</span></div>
+      ${d === baseDay ? '<div class="start">старт</div>' : ''}
+      <div class="dlabel ${d === todayKey ? 'today' : ''}">${lbl}</div></div>`;
+  }).join('');
+  $('bars').querySelectorAll('.bar').forEach(b => b.onclick = () => applyPreset({status: b.dataset.s, period: 'day:' + b.dataset.d}));
+  const anyChange = days.some(d => add[d] || rem[d]);
+  $('chartNote').hidden = anyChange;
+  $('chartNote').textContent = `Отслеживание началось ${fmtFull.format(new Date(BASE))}. Все, кто был в списке на этот момент, считаются базой; изменения появятся после следующих проверок.`;
+}
+
+/* ---------- controls ---------- */
+function countBy(key, filter = () => true) {
+  const m = new Map();
+  for (const p of PEOPLE) if (!p.r && filter(p) && p[key]) m.set(p[key], (m.get(p[key]) || 0) + 1);
+  return m;
+}
+function fillSelect(el, allLabel, map, label = x => x) {
+  const items = [...map].sort((a, b) => String(a[0]).localeCompare(b[0], 'en'));
+  el.innerHTML = `<option value="">${allLabel}</option>` +
+    items.map(([v, n]) => `<option value="${esc(v)}">${esc(label(v))} (${n})</option>`).join('');
+}
+function buildSelects() {
+  const cats = countBy('k');
+  const ordered = new Map(Object.keys(CATS).filter(k => cats.has(k)).map(k => [k, cats.get(k)]).concat([...cats].filter(([k]) => !CATS[k])));
+  $('cat').innerHTML = '<option value="">Все категории</option>' + [...ordered].map(([k, n]) => `<option value="${esc(k)}">${esc(catLabel(k))} (${n})</option>`).join('');
+  fillSelect($('country'), 'Все страны', countBy('c'));
+  fillSelect($('guest'), 'Все подкатегории', countBy('g'));
+  const periods = ['today', 'yesterday', '3d', '7d', 'visit', 'all'];
+  $('period').innerHTML = periods.map(p => `<option value="${p}" ${p === 'visit' && !prevVisit ? 'disabled' : ''}>${periodLabel(p)}${p === 'visit' && prevVisit ? ' (' + fmtFull.format(new Date(prevVisit)) + ')' : ''}</option>`).join('');
+}
+function syncControls() {
+  $('q').value = S.q; $('cat').value = S.cat; $('country').value = S.country; $('guest').value = S.guest;
+  if (S.period.startsWith('day:') && ![...$('period').options].some(o => o.value === S.period)) {
+    $('period').insertAdjacentHTML('beforeend', `<option value="${S.period}">${periodLabel(S.period)}</option>`);
+  }
+  $('period').value = S.period;
+  $('period').disabled = !(S.status === 'new' || S.status === 'removed');
+  $('statusSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === S.status)));
+  document.querySelectorAll('th button').forEach(b => b.querySelector('.arr').textContent = b.dataset.sort === S.sort ? (S.dir > 0 ? '↑' : '↓') : '');
+}
+function setStatus(st) {
+  S.status = st;
+  if (st === 'new' || st === 'removed') { S.sort = 'added'; S.dir = -1; } else { S.sort = 'name'; S.dir = 1; }
+}
+function applyPreset(p) {
+  if (p.status) setStatus(p.status);
+  if (p.period) S.period = p.period;
+  limit = PAGE; syncControls(); render();
+  $('rows').closest('.tablewrap').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+/* ---------- filter + render ---------- */
+function filtered() {
+  const q = fold(S.q).trim().split(/\s+/).filter(Boolean);
+  const range = periodRange(S.period);
+  const out = PEOPLE.filter(p => {
+    if (S.status === 'active' && p.r) return false;
+    if (S.status === 'new' && !(isNew(p) && inRange(p.f, range))) return false;
+    if (S.status === 'removed' && !inRange(p.r, range)) return false;
+    if (S.cat && p.k !== S.cat) return false;
+    if (S.country && p.c !== S.country) return false;
+    if (S.guest && p.g !== S.guest) return false;
+    for (const w of q) if (!p._s.includes(w)) return false;
+    return true;
+  });
+  const byName = (a, b) => a.l.localeCompare(b.l, 'en', {sensitivity: 'base'}) || a.n.localeCompare(b.n, 'en');
+  const keyCmp = {
+    name: byName,
+    org: (a, b) => a.o.localeCompare(b.o, 'en') || byName(a, b),
+    country: (a, b) => a.c.localeCompare(b.c, 'en') || byName(a, b),
+    cat: (a, b) => catLabel(a.k).localeCompare(catLabel(b.k), 'ru') || byName(a, b),
+    added: (a, b) => (S.status === 'removed' ? (a.r || '').localeCompare(b.r || '') : a.f.localeCompare(b.f)) || byName(a, b),
+  }[S.sort] || byName;
+  return out.sort((a, b) => S.dir * keyCmp(a, b));
+}
+function statusBadge(p) {
+  if (p.r) return `<span class="badge gone">выбыл ${fmtShort.format(new Date(p.r))}</span>`;
+  if (isNew(p) && Date.now() - Date.parse(p.f) < 7 * DAY) return '<span class="badge new">новый</span>';
+  return '<span class="muted">в списке</span>';
+}
+function areasHtml(a) {
+  if (!a) return '';
+  const list = a.split(' · ');
+  const more = list.length > 3 ? ` +${list.length - 3}` : '';
+  return `<span class="areas" title="${esc(a)}">${esc(list.slice(0, 3).join(' · '))}${more}</span>`;
+}
+let lastRows = [];
+function render() {
+  writeHash();
+  lastRows = filtered();
+  const shown = lastRows.slice(0, limit);
+  const scope = (S.status === 'new' || S.status === 'removed') ? ` · ${S.status === 'new' ? 'новые' : 'выбывшие'} ${periodLabel(S.period)}` : '';
+  $('count').textContent = `Найдено: ${lastRows.length.toLocaleString('ru-RU')}${scope}`;
+  $('rows').innerHTML = shown.length ? shown.map(p => `<tr class="${p.r ? 'is-gone' : ''}">
+      <td class="namecell" data-l="Имя"><span class="name">${esc(p.n)}</span>${areasHtml(p.a)}</td>
+      <td data-l="Должность">${esc(p.t)}</td>
+      <td data-l="Организация">${esc(p.o)}</td>
+      <td data-l="Страна">${esc(p.c)}</td>
+      <td data-l="Категория" class="cat">${esc(catLabel(p.k))}${p.g ? `<div class="muted">${esc(p.g)}</div>` : ''}</td>
+      <td data-l="Добавлен" class="tnum">${isNew(p) ? fmtShort.format(new Date(p.f)) : '<span class="muted">старт</span>'}</td>
+      <td data-l="Статус">${statusBadge(p)}</td></tr>`).join('')
+    : '<tr><td colspan="7" class="msg">Никого не найдено. Попробуйте изменить фильтры.</td></tr>';
+  $('moreWrap').hidden = lastRows.length <= limit;
+  $('more').textContent = `Показать ещё (${Math.min(PAGE * 2, lastRows.length - limit)})`;
+}
+
+/* ---------- URL hash keeps filters shareable ---------- */
+function writeHash() {
+  const p = new URLSearchParams();
+  for (const k of Object.keys(DEFAULTS)) if (String(S[k]) !== String(DEFAULTS[k])) p.set(k, S[k]);
+  try { history.replaceState(null, '', p.toString() ? '#' + p : location.href.split('#')[0]); } catch (e) {}
+}
+function readHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  S = {...DEFAULTS};
+  for (const k of Object.keys(DEFAULTS)) if (p.has(k)) S[k] = k === 'dir' ? (+p.get(k) || 1) : p.get(k);
+}
+
+/* ---------- CSV ---------- */
+function downloadCsv() {
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const fmtCsv = iso => iso ? fmtFull.format(new Date(iso)) : '';
+  const head = ['Name', 'Title', 'Organization', 'Country', 'Category', 'Subcategory', 'Areas of interest', 'First seen (Bangkok)', 'Removed (Bangkok)', 'Status'];
+  const lines = lastRows.map(p => [p.n, p.t, p.o, p.c, catEn(p.k), p.g, p.a, isNew(p) ? fmtCsv(p.f) : 'baseline', fmtCsv(p.r), p.r ? 'removed' : (isNew(p) ? 'new' : 'in list')].map(cell).join(','));
+  const blob = new Blob(['\uFEFF' + [head.map(cell).join(','), ...lines].join('\r\n')], {type: 'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `amf2026-participants-${dayKey(Date.now())}.csv`;
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ---------- events ---------- */
+let qTimer;
+$('q').addEventListener('input', e => { clearTimeout(qTimer); qTimer = setTimeout(() => { S.q = e.target.value; limit = PAGE; render(); }, 150); });
+for (const id of ['cat', 'country', 'guest', 'period']) $(id).addEventListener('change', e => { S[id] = e.target.value; limit = PAGE; render(); });
+$('statusSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; setStatus(b.dataset.v); limit = PAGE; syncControls(); render(); });
+document.querySelectorAll('th button').forEach(b => b.addEventListener('click', () => {
+  if (S.sort === b.dataset.sort) S.dir = -S.dir; else { S.sort = b.dataset.sort; S.dir = b.dataset.sort === 'added' ? -1 : 1; }
+  syncControls(); render();
+}));
+$('more').onclick = () => { limit += PAGE * 2; render(); };
+$('reset').onclick = () => { S = {...DEFAULTS}; limit = PAGE; syncControls(); render(); };
+$('csv').onclick = downloadCsv;
+window.addEventListener('hashchange', () => { if (!DATA) return; readHash(); syncControls(); render(); });
+
+load();
+</script>
+</body>
+</html>
