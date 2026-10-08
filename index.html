@@ -734,7 +734,7 @@ function renderUpdated() {
   const checked = STATUS?.checked_at || DATA.runs.at(-1).at, age = Date.now() - Date.parse(checked);
   const lastChange = [...DATA.runs].reverse().find(r => !r.baseline);
   $('updDate').textContent = fmt('full', checked);
-  const parts = [L.tzNote, age > 8 * 3600e3 ? `<span class="warn">${esc(L.stale)}</span>` : fill(L.next, {t: fmt('time', nextCheck(Math.max(Date.now(), Date.parse(checked))))}),
+  const parts = [L.tzNote, age > 12 * 3600e3 ? `<span class="warn">${esc(L.stale)}</span>` : fill(L.next, {t: fmt('time', nextCheck(Math.max(Date.now(), Date.parse(checked))))}),
     lastChange ? fill(L.lastChange, {t: fmt('dm', lastChange.at)}) : L.noChange, fill(L.since, {d: fmt('date', BASE)})];
   $('updMeta').innerHTML = parts.map(x => x.startsWith('<') ? x : esc(x)).join(' · ');
   const t = periodRange('today');
